@@ -1,0 +1,9 @@
+package protobuf;
+
+option java_package = "org.rtportfolio.protobuf";
+option java_outer_classname = "RXPU";
+
+message PriceUpdate {
+  required string symbol = 1;
+  required int32 price = 2;
+}

@@ -1,0 +1,18 @@
+syntax = "proto2";
+package protobuf;
+
+option java_package = "org.rtportfolio.protobuf";
+option java_outer_classname = "PortfolioUpdate";
+
+message Position {
+  required string symbol = 1;
+  required double price = 2;
+  required double qty = 3;
+  required double marketValue = 4;
+  required bool isPriceUpdated = 5;
+}
+
+message Portfolio {
+  repeated Position position = 1;
+  required double totalNav = 2;
+}

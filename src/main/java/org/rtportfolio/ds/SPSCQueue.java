@@ -1,17 +1,33 @@
 package org.rtportfolio.ds;
 
+import org.openjdk.jol.info.ClassLayout;
+import sun.misc.Contended;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Implement offer() and poll() only as this is what we need
+ *
+ * Run with -XX:-RestrictContended
+ *
+ * @param <E>
+ */
 public class SPSCQueue<E> implements Queue<E> {
     private final E[] buffer;
-
-    private volatile long tail = 0;
-    private volatile long head = 0;
+    @Contended
+    private AtomicLong head = new AtomicLong(0);
+    @Contended
+    private AtomicLong tail = new AtomicLong(0);
 
     public SPSCQueue(final int capacity) {
-        buffer = (E[]) new Object[capacity];
+        buffer = (E[]) new Object[findNextPositivePowerOfTwo(capacity)];
+    }
+
+    public static int findNextPositivePowerOfTwo(int value) {
+        return 1 << 32 - Integer.numberOfLeadingZeros(value - 1);
     }
 
     @Override
@@ -84,14 +100,14 @@ public class SPSCQueue<E> implements Queue<E> {
         if (e == null) {
             throw new NullPointerException("Null is not a valid element");
         }
-        final long currentTail = tail;
+        final long currentTail = tail.get();
         final long wrapPoint = currentTail - buffer.length;
-        if (head <= wrapPoint) {
+        if (head.get() <= wrapPoint) {
             return false;
         }
 
-        buffer[(int) (currentTail % buffer.length)] = e;
-        tail = currentTail + 1;
+        buffer[(int) (currentTail & (buffer.length - 1))] = e;
+        tail.lazySet(currentTail + 1);
 
         return true;
     }
@@ -103,15 +119,15 @@ public class SPSCQueue<E> implements Queue<E> {
 
     @Override
     public E poll() {
-        final long currentHead = head;
-        if (currentHead >= tail) {
+        final long currentHead = head.get();
+        if (currentHead >= tail.get()) {
             return null;
         }
 
-        final int index = (int) (currentHead % buffer.length);
+        final int index = (int) (currentHead & (buffer.length - 1));
         final E e = buffer[index];
         buffer[index] = null;
-        head = currentHead + 1;
+        head.set(currentHead + 1);
 
         return e;
     }
@@ -124,5 +140,9 @@ public class SPSCQueue<E> implements Queue<E> {
     @Override
     public E peek() {
         return null;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(ClassLayout.parseClass(SPSCQueue.class).toPrintable());
     }
 }

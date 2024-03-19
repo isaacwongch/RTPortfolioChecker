@@ -35,7 +35,7 @@ public class PortfolioSubscriber {
                 int expectedSize = buffer.getInt();
                 buffer.reset();
                 if (expectedSize == 0) {
-                    LOG.info("Unexpected message size"); //clear?
+                    LOG.debug("Unexpected message size"); //clear?
                 }
                 //read 4 already
                 if (expectedSize > buffer.position() - RTConst.INIT_EXPECT_MESSAGE_LEN) {

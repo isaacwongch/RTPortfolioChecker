@@ -19,13 +19,41 @@ import java.util.*;
 
 public class RTPortfolioChecker {
     private static Logger LOG = LoggerFactory.getLogger(RTPortfolioChecker.class);
+    private static Map<String, Position> symbol2PositionMap = new HashMap<>();
+    private static Multimap<String, String> symbol2OptionSymbolsMap = ArrayListMultimap.create();
+    private static Set<String> interestedSymbols = new HashSet<>();
+    private static Map<String, Double> symbol2HistoricalCloseMap = new HashMap<>();
 
     public static void main(String[] args) {
+        init();
+        //init simulated receiver thread
+        RTObjectPool<PriceUpdate> rtObjectPool = new RTObjectPool<>(10, 100, new PriceUpdateObjectCreator());
+        SPSCQueue<PriceUpdate> spscQueue = new SPSCQueue<>(100);
+        SimPublisher simPublisher = new SimPublisher(symbol2HistoricalCloseMap, spscQueue, rtObjectPool);
+        simPublisher.startPublishingMarketPxThread();
+        PortfolioUpdater portfolioUpdater = new PortfolioUpdater(symbol2PositionMap, symbol2OptionSymbolsMap);
+        while (true) {
+            final PriceUpdate pu = spscQueue.poll();
+            try {
+                if (pu != null) {
+                    String symbol = pu.getSymbol();
+                    //ignore other symbols not in the portfolio
+                    if (interestedSymbols.contains(symbol)) {
+                        double price = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
+                        System.out.println("Symbol: " + pu.getSymbol());
+                        System.out.println("Price: " + price);
+                        portfolioUpdater.updatePortfolio(pu);
+                        rtObjectPool.free(pu);
+                    }
+                }
+            } catch (Exception ex) {
+                LOG.error("Exception when processing price update message", ex);
+            }
+        }
+    }
+
+    private static void init() {
         Map<String, Instrument> symbol2InstrumentMap = new HashMap<>();
-        Map<String, Position> symbol2PositionMap = new HashMap<>();
-        Multimap<String, String> symbol2OptionSymbolsMap = ArrayListMultimap.create();
-        Map<String, Double> symbol2HistoricalCloseMap = new HashMap<>();
-        Set<String> interestedSymbols = new HashSet<>();
         //2. load instruments from the db
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:sample.db");
              Statement statement = connection.createStatement()) {
@@ -78,35 +106,9 @@ public class RTPortfolioChecker {
                     interestedSymbols.add(symbol);
                 }
             }
-//            portfolio = new Portfolio(positions);
         } catch (Exception e) {
             System.out.println(e);
         }
         System.gc(); //init complete
-        //init simulated receiver thread
-        RTObjectPool<PriceUpdate> rtObjectPool = new RTObjectPool<>(10, 100, new PriceUpdateObjectCreator());
-        SPSCQueue<PriceUpdate> spscQueue = new SPSCQueue<>(100);
-        SimPublisher simPublisher = new SimPublisher(symbol2HistoricalCloseMap, spscQueue, rtObjectPool);
-        simPublisher.startPublishingMarketPxThread();
-        PortfolioUpdater portfolioUpdater = new PortfolioUpdater(symbol2PositionMap, symbol2OptionSymbolsMap);
-        while (true) {
-            final PriceUpdate pu = spscQueue.poll();
-            try {
-                if (pu != null) {
-                    String symbol = pu.getSymbol();
-                    //ignore other symbols not in the portfolio
-                    if (interestedSymbols.contains(symbol)) {
-                        double price = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
-                        System.out.println("Symbol: " + pu.getSymbol());
-                        System.out.println("Price: " + price);
-                        portfolioUpdater.updatePortfolio(pu);
-                        rtObjectPool.free(pu);
-                    }
-                }
-            } catch (Exception ex) {
-                LOG.error("Exception when processing price update message", ex);
-            }
-
-        }
     }
 }

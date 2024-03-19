@@ -1,10 +1,10 @@
 package org.rtportfolio.model;
 
 public final class SymbolPub {
-    private  String symbol;
-    private  double expectedReturn;
-    private  double standardVar;
-    private  double currentPx;
+    private String symbol;
+    private double expectedReturn;
+    private double standardVar;
+    private double currentPx;
 
     public String getSymbol() {
         return symbol;

@@ -14,6 +14,7 @@ public final class Position {
     public Instrument getInstrument() {
         return instrument;
     }
+
     public int getPositionSize() {
         return positionSize;
     }

@@ -25,13 +25,13 @@ public class PortfolioPublisher {
     private static Logger LOG = LoggerFactory.getLogger(PortfolioPublisher.class);    //implied decimal places
     private ServerSocketChannel serverSocketChannel;
     private Selector selector;
-//    private ByteBuffer writeBuffer = ByteBuffer.allocateDirect(1024 * 1024);
+    //    private ByteBuffer writeBuffer = ByteBuffer.allocateDirect(1024 * 1024);
     private boolean isStopped = false;
 
     private List<SocketChannel> clients;
 
-    public PortfolioPublisher(int port){
-        this.clients = new ArrayList<>(16); //assume we have 1/ not too many clients now
+    public PortfolioPublisher(int port) {
+        this.clients = new ArrayList<>(); //assume we have 1/ not too many clients now
         try {
             selector = Selector.open();
             serverSocketChannel = ServerSocketChannel.open();
@@ -58,31 +58,8 @@ public class PortfolioPublisher {
                     if (key.isAcceptable()) {
                         SocketChannel client = serverSocketChannel.accept();
                         clients.add(client);
-//                        writeBuffer.clear();
-//                        writeBuffer.putInt(30);
-//                        writeBuffer.flip();
-//                        while (writeBuffer.hasRemaining()) {
-//                            System.out.println("writing");
-//                            client.write(writeBuffer);
-//                        }
-//                        ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
-//                        clientSocket = ssc.accept();
-//                        clientSocket.configureBlocking(false);
-//                        clientSocket.socket().setTcpNoDelay(true);
-//                        clientSocket.register(selector, SelectionKey.OP_WRITE); //after someone connects we can send
-//                        System.out.println("isAcceptable");
                     }
-//                    if (key.isWritable()) {
-//                        writeBuffer.clear();
-//                        writeBuffer.putInt(30);
-//                        writeBuffer.flip();
-//                        while (writeBuffer.hasRemaining()) {
-//                            System.out.println("writing");
-//                            clientSocket.write(writeBuffer);
-//                        }
-//                    }
                     selectionKeyIterator.remove();
-
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -93,15 +70,17 @@ public class PortfolioPublisher {
     public void doSend(final ByteBuffer buffer) {
         for (SocketChannel client : clients) {
             buffer.flip();
-            buffer.mark();
+//            buffer.mark();
             while (buffer.hasRemaining()) {
                 try {
-                    client.write(buffer);
+                    int size = client.write(buffer);
+                    LOG.info("size: {}", size);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    //likely Broken pipe, remove
+                    clients.remove(client); //TODO: fix reconnect issue
                 }
             }
-            buffer.reset();
+//            buffer.reset();
         }
         buffer.clear();
     }

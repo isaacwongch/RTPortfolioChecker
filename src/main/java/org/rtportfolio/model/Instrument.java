@@ -6,7 +6,7 @@ public class Instrument {
     private final long strike;
     private final String maturityDate;
 
-    public Instrument(String symbol, InstrumentType instrumentType, long strike, String maturityDate){
+    public Instrument(String symbol, InstrumentType instrumentType, long strike, String maturityDate) {
         this.symbol = symbol;
         this.instrumentType = instrumentType;
         this.strike = strike;

@@ -1,9 +1,6 @@
 package org.rtportfolio;
 
-import org.rtportfolio.model.InstrumentType;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
@@ -14,6 +11,7 @@ public final class OptionPriceCalculator {
     private static final DateTimeFormatter f = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     public static double getTimeToMaturity(final String timeToMaturityDate) {
+        //TODO Garbage
         LocalDate ldt = LocalDate.parse(timeToMaturityDate, f);
         return ChronoUnit.DAYS.between(now, ldt) / 365d;
     }
@@ -42,13 +40,8 @@ public final class OptionPriceCalculator {
         return s * cdf(d1) - x * Math.exp(-r * t) * cdf(d2);
     }
 
-    /**
-     * using Taylor approximation
-     *
-     * @param z
-     * @return
-     */
     public static double cdf(double z) {
+        // using Taylor approximation
         if (z < -8.0) return 0.0;
         if (z > 8.0) return 1.0;
         double sum = 0.0, term = z;

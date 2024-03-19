@@ -11,27 +11,28 @@ public class RTObjectPool<E> {
     private final RTObjectCreator<E> objectCreator;
 
     private int currentSize = 0;
-    public RTObjectPool(final int preAllocateNum, final int maxAllocNum, final RTObjectCreator<E> objectCreator){
+
+    public RTObjectPool(final int preAllocateNum, final int maxAllocNum, final RTObjectCreator<E> objectCreator) {
         this.maxAllocNum = maxAllocNum;
         this.objectPool = new ArrayDeque<>(maxAllocNum);
         this.objectCreator = objectCreator;
-        for (int i = 0; i < preAllocateNum; i++){
+        for (int i = 0; i < preAllocateNum; i++) {
             objectPool.offer(objectCreator.create());
             currentSize++;
         }
     }
 
-    public E get(){
+    public E get() {
         E obj = objectPool.poll();
-        if (obj != null){
+        if (obj != null) {
             currentSize--;
             return obj;
         }
         return objectCreator.create();
     }
 
-    public void free(E object){
-        if (object != null && maxAllocNum > currentSize){
+    public void free(E object) {
+        if (object != null && maxAllocNum > currentSize) {
             objectPool.offer(object);
         }
     }

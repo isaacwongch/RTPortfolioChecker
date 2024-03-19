@@ -10,7 +10,7 @@ public class SPSCQueue<E> implements Queue<E> {
     private volatile long tail = 0;
     private volatile long head = 0;
 
-    public SPSCQueue(final int capacity){
+    public SPSCQueue(final int capacity) {
         buffer = (E[]) new Object[capacity];
     }
 
@@ -81,7 +81,7 @@ public class SPSCQueue<E> implements Queue<E> {
 
     @Override
     public boolean offer(E e) {
-        if (e == null){
+        if (e == null) {
             throw new NullPointerException("Null is not a valid element");
         }
         final long currentTail = tail;

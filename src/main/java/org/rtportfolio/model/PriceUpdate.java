@@ -3,6 +3,7 @@ package org.rtportfolio.model;
 public class PriceUpdate {
     private String symbol;
     private long price;
+
     public String getSymbol() {
         return symbol;
     }

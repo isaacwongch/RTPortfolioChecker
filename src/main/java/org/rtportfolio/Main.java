@@ -22,8 +22,7 @@ public class Main {
                         // create a database connection
                         Connection connection = DriverManager.getConnection("jdbc:sqlite:sample.db");
                         Statement statement = connection.createStatement();
-                )
-        {
+                ) {
             statement.setQueryTimeout(30);  // set timeout to 30 sec.
 
             statement.executeUpdate("drop table if exists instruments");
@@ -39,16 +38,13 @@ public class Main {
             statement.executeUpdate("insert into priceHistory (TICKER,HST_CLOSE) values('APPL', '177.30')");
             statement.executeUpdate("insert into priceHistory (TICKER,HST_CLOSE) values('MSFT', '418.53')");
             ResultSet rs = statement.executeQuery("select * from instruments");
-            while(rs.next())
-            {
+            while (rs.next()) {
                 // read the result set
                 System.out.println("name = " + rs.getString("ticker"));
                 System.out.println("id = " + rs.getInt("id"));
                 System.out.println("id = " + rs.getInt("underlying"));
             }
-        }
-        catch(SQLException e)
-        {
+        } catch (SQLException e) {
             // if the error message is "out of memory",
             // it probably means no database file is found
             e.printStackTrace(System.err);
@@ -69,4 +65,4 @@ public class Main {
 //            Thread.sleep(1000);
 //            numberOfS++;
 //        }
-    }
+}

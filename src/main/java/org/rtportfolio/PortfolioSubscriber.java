@@ -1,81 +1,83 @@
 package org.rtportfolio;
 
-import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 public class PortfolioSubscriber {
+    private static Logger LOG = LoggerFactory.getLogger(RTPortfolioChecker.class);
     private static SocketChannel client;
+    private static final byte[] tempSymbolBytes = new byte[RTConst.MSG_POSITION_SYMBOL_SIZE];
+    private static final Map<byte[], String> byteArr2SymbolMap = new HashMap<>();
+    private static int numberOfUpdate = 0;
 
-    private static Selector selector;
     public static void main(String[] args) {
         try {
             client = SocketChannel.open();
-//            client.configureBlocking(false);
-//            selector = Selector.open();
-//            client.register(selector, SelectionKey.OP_READ);
             client.connect(new InetSocketAddress("localhost", 8001));
-            ByteBuffer buffer = ByteBuffer.allocate(256);
-
-            while (true){
-                int i = client.read(buffer);
-                if (i > 0){
+            ByteBuffer buffer = ByteBuffer.allocate(8192);
+            while (true) {
+                int result = client.read(buffer);
+                if (result == -1) {
+                    //indicate channel disconnected
+                    LOG.error("Channel disconnected");
+                    break;//for simplicity
+                }
+                if (buffer.position() < RTConst.INIT_EXPECT_MESSAGE_LEN) {
+                    continue;
+                }
+                buffer.mark();
+                int expectedSize = buffer.getInt();
+                buffer.reset();
+                if (expectedSize == 0) {
+                    LOG.info("Unexpected message size"); //clear?
+                }
+                //read 4 already
+                if (expectedSize > buffer.position() - RTConst.INIT_EXPECT_MESSAGE_LEN) {
+                    LOG.info("message not received completely - expectedSize {} receivedSize {}", expectedSize, buffer.position());
+                } else {
                     buffer.flip();
-                    int value = buffer.getInt();
-                    System.out.println(value);
+                    buffer.getInt();
+                    //decode, could have used SBE
+                    int numOfPosition = buffer.getInt();
+                    LOG.info("number of position: {}", numOfPosition);
+                    for (int i = 0; i < numOfPosition; i++) {
+                        buffer.get(tempSymbolBytes, 0, RTConst.MSG_POSITION_SYMBOL_SIZE);
+                        int pos = 0;
+                        while (pos < RTConst.MSG_POSITION_SYMBOL_SIZE && tempSymbolBytes[pos] != RTConst.PAD) {
+                            pos++;
+                        }
+                        //reuse String
+                        String symbol;
+                        if (byteArr2SymbolMap.containsKey(tempSymbolBytes)) {
+                            symbol = byteArr2SymbolMap.get(tempSymbolBytes);
+                        } else {
+                            symbol = new String(tempSymbolBytes, 0, pos);
+                            byteArr2SymbolMap.put(tempSymbolBytes.clone(), symbol);
+                        }
+                        double price = buffer.getDouble();
+                        int qty = buffer.getInt();
+                        double marketValue = buffer.getDouble();
+                        byte isUpdatedSymbol = buffer.get();
+                        buffer.get();
+                        buffer.get();
+                        buffer.get();
+                        LOG.info("symbol: {} price: {} qty: {} marketValue: {}", symbol, price, qty, marketValue);
+                    }
+                    double totalNav = buffer.getDouble();
+                    LOG.info("totalNav: {}", totalNav);
                     buffer.compact();
+//                    LOG.info("totalNav: {} pos {} limit {} cap {}", totalNav, buffer.position(), buffer.limit(), buffer.capacity());
                 }
             }
-//            while (true) {
-//                int n = selector.select();
-//                if (n == 0){
-//                    continue;
-//                }
-//                Set<SelectionKey> selectedKeys = selector.selectedKeys();
-//                Iterator<SelectionKey> iter = selectedKeys.iterator();
-//                while (iter.hasNext()) {
-//
-//                    SelectionKey key = iter.next();
-//
-//                    if (key.isReadable()) {
-//                        System.out.println("isReadable");
-//                        buffer.flip();
-//                        System.out.println(buffer.getInt());
-//                        buffer.clear();
-//                    }
-//                    iter.remove();
-//                }
-//            }
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
-
-//    public static void main(String[] args) {
-//        ByteBuffer bb = ByteBuffer.allocateDirect(10);
-//        System.out.println("bb pos " + bb.position());
-//        System.out.println("bb limit " + bb.limit());
-//        System.out.println("bb capacity " + bb.capacity());
-//        bb.putInt(10);
-//        System.out.println("bb pos " + bb.position());
-//        System.out.println("bb limit " + bb.limit());
-//        System.out.println("bb capacity " + bb.capacity());
-//        bb.flip();
-//        System.out.println("bb pos " + bb.position());
-//        System.out.println("bb limit " + bb.limit());
-//        System.out.println("bb capacity " + bb.capacity());
-//        bb.getInt();
-//        System.out.println("bb pos " + bb.position());
-//        System.out.println("bb limit " + bb.limit());
-//        System.out.println("bb capacity " + bb.capacity());
-//        bb.compact();
-//        System.out.println("bb pos " + bb.position());
-//        System.out.println("bb limit " + bb.limit());
-//        System.out.println("bb capacity " + bb.capacity());
-//    }
 }

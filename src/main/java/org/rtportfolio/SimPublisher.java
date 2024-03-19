@@ -33,9 +33,9 @@ public class SimPublisher {
             symbolPub.setSymbol(symbol);
             symbolPub.setExpectedReturn(Math.random());
             symbolPub.setStandardVar(Math.random());
-            if (symbol2HistoricalClose.containsKey(symbol)){
+            if (symbol2HistoricalClose.containsKey(symbol)) {
                 symbolPub.setCurrentPx(symbol2HistoricalClose.get(symbol));
-            }else {
+            } else {
                 symbolPub.setCurrentPx(getRandomNumber(1, 100));
             }
             symbolPubs[i] = symbolPub;

@@ -88,8 +88,8 @@ public class PortfolioUpdater {
                 bb.put(RTConst.PAD);
             }
             bb.putDouble(position.getSymbolCurrentValPerShare());
-            bb.putInt(position.getPositionSize());
             bb.putDouble(position.getPositionMarketValue());
+            bb.putInt(position.getPositionSize());
             bb.put(symbol.equals(updatingStockSymbol) ? RTConst.IS_UPDATED_BYTE : RTConst.NOT_UPDATED_BYTE);
             bb.put(RTConst.THREE_PADS, 0, 3);
             LOG.info("symbol {} price {} qty {} market value {}", symbol, position.getSymbolCurrentValPerShare(), position.getPositionSize(), position.getPositionMarketValue());

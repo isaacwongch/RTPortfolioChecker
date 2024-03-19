@@ -61,8 +61,8 @@ public class PortfolioSubscriber {
                             byteArr2SymbolMap.put(tempSymbolBytes.clone(), symbol);
                         }
                         double price = buffer.getDouble();
-                        int qty = buffer.getInt();
                         double marketValue = buffer.getDouble();
+                        int qty = buffer.getInt();
                         byte isUpdatedSymbol = buffer.get();
                         buffer.get();
                         buffer.get();

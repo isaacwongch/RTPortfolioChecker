@@ -127,7 +127,7 @@ public class SPSCQueue<E> implements Queue<E> {
         final int index = (int) (currentHead & (buffer.length - 1));
         final E e = buffer[index];
         buffer[index] = null;
-        head.set(currentHead + 1);
+        head.lazySet(currentHead + 1);
 
         return e;
     }

@@ -19,7 +19,7 @@
     +---------------+---------------+-------------------------------+
     | UPDATED PRICE ||R                SYMBOL                       | 
     +---------------+---------------+-------------------------------+
-    |    PRICE      |    MAR VAL    |   QTY  |        NAV           |
+    |    PRICE      |    MAR VAL    |   QTY  ||        NAV          |
     +---------------+---------------+-------------------------------+
     Message Length (ML) (4)
     Number of Positions (NP) (4)
@@ -32,4 +32,5 @@
     Price (8)
     Market Value (MAR VAL) (8)
     Quantity (QTY) (4)
+
     Portfolio NAV (NAV) (8)

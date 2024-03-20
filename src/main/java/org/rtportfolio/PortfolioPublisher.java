@@ -56,6 +56,7 @@ public class PortfolioPublisher {
                 while (selectionKeyIterator.hasNext()) {
                     SelectionKey key = selectionKeyIterator.next();
                     if (key.isAcceptable()) {
+                        //TODO check why multiple clients not working for now
                         SocketChannel client = serverSocketChannel.accept();
                         clients.add(client);
                     }

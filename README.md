@@ -1,6 +1,6 @@
 **How to run the program**
 
-* Run Main.java to create the db file first, it will generate sample.db for subsequent use
+* Run DatabaseGenerator.java to create the db file first, it will generate sample.db for subsequent use
 * Run RTPortfolioChecker, this acts as the publisher
 * Run PortfolioSubscriber, this acts as the subscriber
 

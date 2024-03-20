@@ -1,26 +1,36 @@
 package org.rtportfolio.ds;
 
 import org.openjdk.jol.info.ClassLayout;
-import sun.misc.Contended;
 
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Implement offer() and poll() only as this is what we need
- *
- * Run with -XX:-RestrictContended
- *
- * @param <E>
- */
-public class SPSCQueue<E> implements Queue<E> {
+class AbstractSPSCQueue1 {
+    protected long p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15;
+}
+
+class AbstractSPSCQueue2 extends AbstractSPSCQueue1 {
+    protected AtomicLong head = new AtomicLong(0); //consumer
+    protected long tailCache = 0L;
+}
+
+class AbstractSPSCQueue3 extends AbstractSPSCQueue2{
+    protected long p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30;
+}
+
+class AbstractSPSCQueue4 extends AbstractSPSCQueue3{
+    protected AtomicLong tail = new AtomicLong(0); //producer
+    protected long headCache = 0L;
+}
+
+class AbstractSPSCQueue5 extends AbstractSPSCQueue4{
+    protected long p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45;
+}
+
+public class SPSCQueue<E> extends AbstractSPSCQueue5 implements Queue<E> {
     private final E[] buffer;
-    @Contended
-    private AtomicLong head = new AtomicLong(0);
-    @Contended
-    private AtomicLong tail = new AtomicLong(0);
 
     public SPSCQueue(final int capacity) {
         buffer = (E[]) new Object[findNextPositivePowerOfTwo(capacity)];
@@ -32,67 +42,67 @@ public class SPSCQueue<E> implements Queue<E> {
 
     @Override
     public int size() {
-        return 0;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean isEmpty() {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean contains(Object o) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Iterator<E> iterator() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object[] toArray() {
-        return new Object[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean add(E e) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean remove(Object o) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void clear() {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -102,10 +112,12 @@ public class SPSCQueue<E> implements Queue<E> {
         }
         final long currentTail = tail.get();
         final long wrapPoint = currentTail - buffer.length;
-        if (head.get() <= wrapPoint) {
-            return false;
+        if (headCache <= wrapPoint){
+            headCache = head.get();
+            if (headCache <= wrapPoint) {
+                return false;
+            }
         }
-
         buffer[(int) (currentTail & (buffer.length - 1))] = e;
         tail.lazySet(currentTail + 1);
 
@@ -114,14 +126,17 @@ public class SPSCQueue<E> implements Queue<E> {
 
     @Override
     public E remove() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public E poll() {
         final long currentHead = head.get();
-        if (currentHead >= tail.get()) {
-            return null;
+        if (currentHead >= tailCache){
+            tailCache = tail.get();
+            if (currentHead >= tailCache) {
+                return null;
+            }
         }
 
         final int index = (int) (currentHead & (buffer.length - 1));
@@ -134,12 +149,12 @@ public class SPSCQueue<E> implements Queue<E> {
 
     @Override
     public E element() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public E peek() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     public static void main(String[] args) {

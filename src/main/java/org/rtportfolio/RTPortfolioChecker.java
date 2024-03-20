@@ -12,6 +12,8 @@ import org.rtportfolio.util.PriceUpdateObjectCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
@@ -40,18 +42,21 @@ public class RTPortfolioChecker {
                     //ignore other symbols not in the portfolio
                     if (interestedSymbols.contains(symbol)) {
                         double price = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
-                        System.out.println("Symbol: " + pu.getSymbol());
-                        System.out.println("Price: " + price);
+//                        System.out.println("Symbol: " + pu.getSymbol());
+//                        System.out.println("Price: " + price);
                         portfolioUpdater.updatePortfolio(pu);
                         rtObjectPool.free(pu);
                     }
                 }
             } catch (Exception ex) {
-                LOG.error("Exception when processing price update message", ex);
+                LOG.error("Exception when processing price update message - PriceUpdate[{},{}]", pu.getSymbol(), pu.getPrice(), ex);
             }
         }
     }
 
+    /**
+     * Get necessary data before main job begins
+     */
     private static void init() {
         Map<String, Instrument> symbol2InstrumentMap = new HashMap<>();
         //2. load instruments from the db
@@ -87,7 +92,7 @@ public class RTPortfolioChecker {
             }
             rs.close();
         } catch (SQLException e) {
-            e.printStackTrace(System.err);
+            throw new RuntimeException(e);
         }
 
         //1. read CSV (expect one portfolio?)
@@ -106,9 +111,12 @@ public class RTPortfolioChecker {
                     interestedSymbols.add(symbol);
                 }
             }
-        } catch (Exception e) {
-            System.out.println(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
+
         System.gc(); //init complete
     }
 }

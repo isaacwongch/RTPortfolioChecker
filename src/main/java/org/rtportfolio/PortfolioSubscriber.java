@@ -10,11 +10,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PortfolioSubscriber {
-    private static Logger LOG = LoggerFactory.getLogger(RTPortfolioChecker.class);
+    private static Logger LOG = LoggerFactory.getLogger(PortfolioSubscriber.class);
     private static SocketChannel client;
     private static final byte[] tempSymbolBytes = new byte[RTConst.MSG_POSITION_SYMBOL_SIZE];
     private static final Map<byte[], String> byteArr2SymbolMap = new HashMap<>();
     private static int numberOfUpdate = 0;
+
+    private static String updatedSymbol;
+    private static double updatedPrice;
 
     public static void main(String[] args) {
         try {
@@ -39,13 +42,17 @@ public class PortfolioSubscriber {
                 }
                 //read 4 already
                 if (expectedSize > buffer.position() - RTConst.INIT_EXPECT_MESSAGE_LEN) {
-                    LOG.info("message not received completely - expectedSize {} receivedSize {}", expectedSize, buffer.position());
+                    LOG.debug("message not received completely - expectedSize {} receivedSize {}", expectedSize, buffer.position());
                 } else {
                     buffer.flip();
                     buffer.getInt();
                     //decode, could have used SBE
                     int numOfPosition = buffer.getInt();
-                    LOG.info("number of position: {}", numOfPosition);
+                    LOG.debug("number of position: {}", numOfPosition);
+                    System.out.printf("%-2s%-1s%-5d%-19s\n", "##", " ", numberOfUpdate++, " Market Data Update");
+                    System.out.printf("%-22s%-11s%-12.2s\n","SYMBOL", " change to ", "1234");
+                    System.out.printf("%-22s\n","## Portfolio");
+                    System.out.printf("%-22s%-22s%-22s%-22s\n","symbol","price","qty","value");
                     for (int i = 0; i < numOfPosition; i++) {
                         buffer.get(tempSymbolBytes, 0, RTConst.MSG_POSITION_SYMBOL_SIZE);
                         int pos = 0;
@@ -64,13 +71,21 @@ public class PortfolioSubscriber {
                         double marketValue = buffer.getDouble();
                         int qty = buffer.getInt();
                         byte isUpdatedSymbol = buffer.get();
+                        if (RTConst.IS_UPDATED_BYTE == isUpdatedSymbol){
+                            updatedSymbol = symbol;
+                            updatedPrice = price;
+                        }
                         buffer.get();
                         buffer.get();
                         buffer.get();
-                        LOG.info("symbol: {} price: {} qty: {} marketValue: {}", symbol, price, qty, marketValue);
+                        System.out.printf("%-22s%-22.2f%-22d%-22.2f\n",symbol,price,qty,marketValue);
+//                        LOG.info("{}\t{}\t{}\t{}", symbol, price, qty, marketValue);
                     }
                     double totalNav = buffer.getDouble();
-                    LOG.info("totalNav: {}", totalNav);
+//                    LOG.info("#Symbol {} change to {}", updatedSymbol, updatedPrice);
+//                    LOG.info("#Total portfolio\t\t\t{}", totalNav);
+                    System.out.println();
+                    System.out.printf("%-22s%-22s%-22s%-22.2f\n","##Total portfolio", "", "", totalNav);
                     buffer.compact();
 //                    LOG.info("totalNav: {} pos {} limit {} cap {}", totalNav, buffer.position(), buffer.limit(), buffer.capacity());
                 }

@@ -34,11 +34,6 @@ public final class OptionPriceCalculator {
         return strike * Math.exp(-RISK_FREE_RATE * timeToMaturity) * cdf(-d2) - stockPrice * cdf(-d1);
     }
 
-    public static double callPrice(double s, double x, double r, double sigma, double t) {
-        double d1 = (Math.log(s / x) + (r + sigma * sigma / 2) * t) / (sigma * Math.sqrt(t));
-        double d2 = d1 - sigma * Math.sqrt(t);
-        return s * cdf(d1) - x * Math.exp(-r * t) * cdf(d2);
-    }
 
     public static double cdf(double z) {
         // using Taylor approximation
@@ -57,8 +52,6 @@ public final class OptionPriceCalculator {
     }
 
     public static void main(String[] args) {
-        System.out.println(callPrice(60, 60, 0.05, 0.1, 1));
         System.out.println(calculateCallPrice(60, 1, 60));
-
     }
 }

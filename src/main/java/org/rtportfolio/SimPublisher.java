@@ -48,7 +48,7 @@ public class SimPublisher {
             Random random = new Random();
             int elapsedMillis = 0;
             while (true) {
-                int toElapseMillis = (int) getRandomNumber(1000, 2500);
+                int toElapseMillis = (int) getRandomNumber(500, 2500);
                 try {
                     Thread.sleep(toElapseMillis);
                 } catch (InterruptedException e) {

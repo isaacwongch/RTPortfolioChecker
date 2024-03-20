@@ -70,7 +70,7 @@ public class PortfolioPublisher {
     public void doSend(final ByteBuffer buffer) {
         for (SocketChannel client : clients) {
             buffer.flip();
-//            buffer.mark();
+            buffer.mark();
             while (buffer.hasRemaining()) {
                 try {
                     int size = client.write(buffer);
@@ -78,9 +78,10 @@ public class PortfolioPublisher {
                 } catch (IOException e) {
                     //likely Broken pipe, remove
                     clients.remove(client); //TODO: fix reconnect issue
+                    return;
                 }
             }
-//            buffer.reset();
+            buffer.reset();
         }
         buffer.clear();
     }

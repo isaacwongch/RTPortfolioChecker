@@ -12,12 +12,9 @@ import java.util.Map;
 public class PortfolioSubscriber {
     private static Logger LOG = LoggerFactory.getLogger(PortfolioSubscriber.class);
     private static SocketChannel client;
-    private static final byte[] tempSymbolBytes = new byte[RTConst.MSG_POSITION_SYMBOL_SIZE];
+    private static final byte[] tempSymbolBytes = new byte[RTConst.MSG_SYMBOL_SIZE];
     private static final Map<byte[], String> byteArr2SymbolMap = new HashMap<>();
     private static int numberOfUpdate = 0;
-
-    private static String updatedSymbol;
-    private static double updatedPrice;
 
     public static void main(String[] args) {
         try {
@@ -48,44 +45,30 @@ public class PortfolioSubscriber {
                     buffer.getInt();
                     //decode, could have used SBE
                     int numOfPosition = buffer.getInt();
+                    int updatedSymbolLen = parseSymbol(buffer);
+                    String updatedSymbol = getSymbolStr(updatedSymbolLen);
+                    double updatedPrice = buffer.getDouble();
                     LOG.debug("number of position: {}", numOfPosition);
                     System.out.printf("%-2s%-1s%-5d%-19s\n", "##", " ", numberOfUpdate++, " Market Data Update");
-                    System.out.printf("%-22s%-11s%-12.2s\n","SYMBOL", " change to ", "1234");
-                    System.out.printf("%-22s\n","## Portfolio");
-                    System.out.printf("%-22s%-22s%-22s%-22s\n","symbol","price","qty","value");
+                    System.out.printf("%-6s%-11s%-20.2f\n", updatedSymbol, " change to ", updatedPrice);
+                    System.out.printf("%-22s\n", "## Portfolio");
+                    System.out.printf("%-22s%-22s%-22s%-22s\n", "symbol", "price", "qty", "value");
                     for (int i = 0; i < numOfPosition; i++) {
-                        buffer.get(tempSymbolBytes, 0, RTConst.MSG_POSITION_SYMBOL_SIZE);
-                        int pos = 0;
-                        while (pos < RTConst.MSG_POSITION_SYMBOL_SIZE && tempSymbolBytes[pos] != RTConst.PAD) {
-                            pos++;
-                        }
+                        int len = parseSymbol(buffer);
                         //reuse String
-                        String symbol;
-                        if (byteArr2SymbolMap.containsKey(tempSymbolBytes)) {
-                            symbol = byteArr2SymbolMap.get(tempSymbolBytes);
-                        } else {
-                            symbol = new String(tempSymbolBytes, 0, pos);
-                            byteArr2SymbolMap.put(tempSymbolBytes.clone(), symbol);
-                        }
+                        String symbol = getSymbolStr(len);
                         double price = buffer.getDouble();
                         double marketValue = buffer.getDouble();
                         int qty = buffer.getInt();
-                        byte isUpdatedSymbol = buffer.get();
-                        if (RTConst.IS_UPDATED_BYTE == isUpdatedSymbol){
-                            updatedSymbol = symbol;
-                            updatedPrice = price;
-                        }
-                        buffer.get();
-                        buffer.get();
-                        buffer.get();
-                        System.out.printf("%-22s%-22.2f%-22d%-22.2f\n",symbol,price,qty,marketValue);
+                        System.out.printf("%-22s%-22.2f%-22d%-22.2f\n", symbol, price, qty, marketValue);
 //                        LOG.info("{}\t{}\t{}\t{}", symbol, price, qty, marketValue);
                     }
                     double totalNav = buffer.getDouble();
 //                    LOG.info("#Symbol {} change to {}", updatedSymbol, updatedPrice);
 //                    LOG.info("#Total portfolio\t\t\t{}", totalNav);
                     System.out.println();
-                    System.out.printf("%-22s%-22s%-22s%-22.2f\n","##Total portfolio", "", "", totalNav);
+                    System.out.printf("%-22s%-22s%-22s%-22.2f\n", "##Total portfolio", "", "", totalNav);
+                    System.out.println();
                     buffer.compact();
 //                    LOG.info("totalNav: {} pos {} limit {} cap {}", totalNav, buffer.position(), buffer.limit(), buffer.capacity());
                 }
@@ -94,5 +77,25 @@ public class PortfolioSubscriber {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static int parseSymbol(final ByteBuffer buffer) {
+        buffer.get(tempSymbolBytes, 0, RTConst.MSG_SYMBOL_SIZE);
+        int pos = 0;
+        while (pos < RTConst.MSG_SYMBOL_SIZE && tempSymbolBytes[pos] != RTConst.PAD) {
+            pos++;
+        }
+        return pos;
+    }
+
+    private static String getSymbolStr(final int symbolLen) {
+        String symbol;
+        if (byteArr2SymbolMap.containsKey(tempSymbolBytes)) {
+            symbol = byteArr2SymbolMap.get(tempSymbolBytes);
+        } else {
+            symbol = new String(tempSymbolBytes, 0, symbolLen);
+            byteArr2SymbolMap.put(tempSymbolBytes.clone(), symbol);
+        }
+        return symbol;
     }
 }

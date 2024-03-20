@@ -79,24 +79,30 @@ public class PortfolioUpdater {
         bb.clear();
         bb.putInt(PUB_MSG_SIZE);
         bb.putInt(symbol2PositionMap.size()); //number of positions
+        putSymbol(updatingStockSymbol);
+        bb.putDouble(newPx);
         for (Map.Entry<String, Position> map : symbol2PositionMap.entrySet()) {
             String symbol = map.getKey();
             Position position = map.getValue();
-            int len = symbol.length();
-            bb.put(symbol.getBytes(), 0, len);
-            for (int i = len; i < RTConst.MSG_POSITION_SYMBOL_SIZE; i++) {
-                bb.put(RTConst.PAD);
-            }
+            putSymbol(symbol);
             bb.putDouble(position.getSymbolCurrentValPerShare());
             bb.putDouble(position.getPositionMarketValue());
             bb.putInt(position.getPositionSize());
-            bb.put(symbol.equals(updatingStockSymbol) ? RTConst.IS_UPDATED_BYTE : RTConst.NOT_UPDATED_BYTE);
-            bb.put(RTConst.THREE_PADS, 0, 3);
+//            bb.put(symbol.equals(updatingStockSymbol) ? RTConst.IS_UPDATED_BYTE : RTConst.NOT_UPDATED_BYTE);
+//            bb.put(RTConst.THREE_PADS, 0, 3);
             LOG.info("symbol {} price {} qty {} market value {}", symbol, position.getSymbolCurrentValPerShare(), position.getPositionSize(), position.getPositionMarketValue());
         }
         LOG.info("Portfolio NAV: {}", portfolioNav);
         bb.putDouble(portfolioNav);
         portfolioPublisher.doSend(bb);
+    }
+
+    private void putSymbol(final String symbol){
+        int len = symbol.length();
+        bb.put(symbol.getBytes(), 0, len);
+        for (int i = len; i < RTConst.MSG_SYMBOL_SIZE; i++) {
+            bb.put(RTConst.PAD);
+        }
     }
 
 }

@@ -1,11 +1,12 @@
 package org.rtportfolio;
 
 import com.google.common.collect.Multimap;
-import org.rtportfolio.model.*;
+import org.rtportfolio.model.Instrument;
+import org.rtportfolio.model.InstrumentType;
+import org.rtportfolio.model.Position;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 
@@ -19,36 +20,34 @@ import java.util.Map;
  * TODO: Implement heartbeat/could have used SBE to define the protocol
  */
 public class PortfolioUpdater {
-    private static Logger LOG = LoggerFactory.getLogger(RTPortfolioChecker.class);
+    private static final double RISK_FREE_RATE = 0.02; //2%
+    private static final double IMPLIED_VOLATILITY = 0.1; //for simplicity assume same for all
+    private static final Logger LOG = LoggerFactory.getLogger(RTPortfolioChecker.class);
 
     //    private Portfolio targetPortfolio;
-    private Multimap<String, String> symbol2OptionMap;
-    private Map<String, Position> symbol2PositionMap;
+    private final Multimap<String, String> symbol2OptionMap;
+    private final Map<String, Position> symbol2PositionMap;
     private double portfolioNav = 0;
     private final PortfolioPublisher portfolioPublisher;
-    private final ByteBuffer bb;
-    private int PUB_MSG_SIZE;
+    private final int PUB_MSG_SIZE;
 
-    public PortfolioUpdater(final Map<String, Position> symbol2PositionMap, final Multimap<String, String> symbol2OptionMap) {
+    public PortfolioUpdater(final Map<String, Position> symbol2PositionMap, final Multimap<String, String> symbol2OptionMap, final PortfolioPublisher portfolioPublisher) {
         this.symbol2PositionMap = symbol2PositionMap;
         this.symbol2OptionMap = symbol2OptionMap;
-        this.portfolioPublisher = new PortfolioPublisher(8001);
-        bb = ByteBuffer.allocateDirect(8192);
-        PUB_MSG_SIZE = 4 + 4 + symbol2PositionMap.size() * 48 + 8;
+        this.portfolioPublisher = portfolioPublisher;
+        PUB_MSG_SIZE = Integer.BYTES + Integer.BYTES + symbol2PositionMap.size() * RTConst.REPEATED_POSITION_COMPONENT_SIZE + Long.BYTES;
     }
 
-    public void updatePortfolio(final PriceUpdate priceUpdate) {
+    public void updatePortfolio(final String updatingStockSymbol, final double updatedStockPrice) {
         double delta = 0L; //for NAV
 
-        final String updatingStockSymbol = priceUpdate.getSymbol();
-        final double newPx = priceUpdate.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
         Position stockPos = symbol2PositionMap.get(updatingStockSymbol);
         double oldStockPx = stockPos.getSymbolCurrentValPerShare();
-        stockPos.setSymbolCurrentValPerShareAndDependent(newPx);
-        delta += (newPx - oldStockPx) * stockPos.getPositionSize();
+        stockPos.setSymbolCurrentValPerShareAndDependent(updatedStockPrice);
+        delta += (updatedStockPrice - oldStockPx) * stockPos.getPositionSize();
 
         Collection<String> associatedOptionSymbols = symbol2OptionMap.get(updatingStockSymbol);
-        LOG.info("updatingStockSymbol {} newPx {} ", updatingStockSymbol, newPx);
+        LOG.info("updatingStockSymbol {} newPx {} ", updatingStockSymbol, updatedStockPrice);
         for (String optionSymbol : associatedOptionSymbols) {
             Position optPos = symbol2PositionMap.get(optionSymbol);
             Instrument optIns = optPos.getInstrument();
@@ -57,14 +56,14 @@ public class PortfolioUpdater {
                 LOG.error("Option details for {} could not found", optionSymbol);
                 continue;
             }
-            double newOptionPx = 0d;
-            LOG.info("updatingStockSymbol {} newPx {} optIns.getMaturityDate() {}", updatingStockSymbol, newPx, optIns.getMaturityDate());
+            double newOptionPx;
+            LOG.info("updatingStockSymbol {} newPx {} optIns.getMaturityDate() {}", updatingStockSymbol, updatedStockPrice, optIns.getMaturityDate());
             double ttm = OptionPriceCalculator.getTimeToMaturity(optIns.getMaturityDate());
             if (optIns.getInstrumentType() == InstrumentType.CALL_OPTION) {
-                newOptionPx = OptionPriceCalculator.calculateCallPrice(newPx, ttm, optIns.getStrike());
+                newOptionPx = OptionPriceCalculator.calculateCallPrice(updatedStockPrice, optIns.getStrike(), ttm, RISK_FREE_RATE, IMPLIED_VOLATILITY);
                 LOG.info("optionSymbol {} optIns.getStrike() {} ttm {} newOptionPx() {}", optionSymbol, optIns.getStrike(), ttm, newOptionPx);
             } else if (optIns.getInstrumentType() == InstrumentType.PUT_OPTION) {
-                newOptionPx = OptionPriceCalculator.calculatePutPrice(newPx, ttm, optIns.getStrike());
+                newOptionPx = OptionPriceCalculator.calculatePutPrice(updatedStockPrice, optIns.getStrike(), ttm, RISK_FREE_RATE, IMPLIED_VOLATILITY);
                 LOG.info("optionSymbol {} optIns.getStrike() {} ttm {} newOptionPx() {}", optionSymbol, optIns.getStrike(), ttm, newOptionPx);
             } else {
                 LOG.error("Unexpected instrument type, ignoring optionSymbol {}", optionSymbol);
@@ -76,33 +75,36 @@ public class PortfolioUpdater {
         }
         portfolioNav += delta;
         //publish
-        bb.clear();
-        bb.putInt(PUB_MSG_SIZE);
-        bb.putInt(symbol2PositionMap.size()); //number of positions
-        putSymbol(updatingStockSymbol);
-        bb.putDouble(newPx);
-        for (Map.Entry<String, Position> map : symbol2PositionMap.entrySet()) {
-            String symbol = map.getKey();
-            Position position = map.getValue();
-            putSymbol(symbol);
-            bb.putDouble(position.getSymbolCurrentValPerShare());
-            bb.putDouble(position.getPositionMarketValue());
-            bb.putInt(position.getPositionSize());
-//            bb.put(symbol.equals(updatingStockSymbol) ? RTConst.IS_UPDATED_BYTE : RTConst.NOT_UPDATED_BYTE);
-//            bb.put(RTConst.THREE_PADS, 0, 3);
-            LOG.info("symbol {} price {} qty {} market value {}", symbol, position.getSymbolCurrentValPerShare(), position.getPositionSize(), position.getPositionMarketValue());
-        }
-        LOG.info("Portfolio NAV: {}", portfolioNav);
-        bb.putDouble(portfolioNav);
-        portfolioPublisher.doSend(bb);
+        //TODO: add ring buffer here
+        portfolioPublisher.publishLatestPortfolio(PUB_MSG_SIZE, updatingStockSymbol, updatedStockPrice, symbol2PositionMap, portfolioNav);
     }
 
-    private void putSymbol(final String symbol){
-        int len = symbol.length();
-        bb.put(symbol.getBytes(), 0, len);
-        for (int i = len; i < RTConst.MSG_SYMBOL_SIZE; i++) {
-            bb.put(RTConst.PAD);
-        }
-    }
+//    private void putSymbol(final String symbol) {
+//        int len = symbol.length();
+//        bb.put(symbol.getBytes(), 0, len);
+//        for (int i = len; i < RTConst.MSG_SYMBOL_SIZE; i++) {
+//            bb.put(RTConst.PAD);
+//        }
+//    }
+//
+//    private void publishLatestPortfolio(final int messageSize, final String updatedSymbol, final double updatedPrice, final Map<String, Position> symbol2PosMap, final double portfolioNav) {
+//        bb.clear();
+//        bb.putInt(messageSize);
+//        bb.putInt(symbol2PosMap.size()); //number of positions
+//        putSymbol(updatedSymbol);
+//        bb.putDouble(updatedPrice);
+//        for (Map.Entry<String, Position> map : symbol2PosMap.entrySet()) {
+//            String symbol = map.getKey();
+//            Position position = map.getValue();
+//            putSymbol(symbol);
+//            bb.putDouble(position.getSymbolCurrentValPerShare());
+//            bb.putDouble(position.getPositionMarketValue());
+//            bb.putInt(position.getPositionSize());
+//            LOG.info("symbol {} price {} qty {} market value {}", symbol, position.getSymbolCurrentValPerShare(), position.getPositionSize(), position.getPositionMarketValue());
+//        }
+//        LOG.info("Portfolio NAV: {}", portfolioNav);
+//        bb.putDouble(portfolioNav);
+//        portfolioPublisher.doSend(bb);
+//    }
 
 }

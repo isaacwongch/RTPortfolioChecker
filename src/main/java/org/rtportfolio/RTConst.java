@@ -19,6 +19,7 @@ public class RTConst {
     public static final int MSG_POSITION_PRICE_SIZE = Long.BYTES;
     public static final int MSG_POSITION_QTY_SIZE = Integer.SIZE;
     public static final int MSG_POSITION_MARKET_VALUE_SIZE = Long.BYTES;
+    public static final int REPEATED_POSITION_COMPONENT_SIZE = 48;
     public static final byte PAD = (byte) ' ';
     public static final byte[] THREE_PADS = new byte[3];
     public static final byte IS_UPDATED_BYTE = 'Y';

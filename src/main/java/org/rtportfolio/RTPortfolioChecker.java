@@ -21,7 +21,7 @@ import java.util.*;
 
 public class RTPortfolioChecker {
     private static Logger LOG = LoggerFactory.getLogger(RTPortfolioChecker.class);
-    private static Map<String, Position> symbol2PositionMap = new HashMap<>();
+    private static Map<String, Position> symbol2PositionMap = new HashMap<>(); //would have used agrona
     private static Multimap<String, String> symbol2OptionSymbolsMap = ArrayListMultimap.create();
     private static Set<String> interestedSymbols = new HashSet<>();
     private static Map<String, Double> symbol2HistoricalCloseMap = new HashMap<>();
@@ -33,7 +33,7 @@ public class RTPortfolioChecker {
         SPSCQueue<PriceUpdate> spscQueue = new SPSCQueue<>(100);
         SimPublisher simPublisher = new SimPublisher(symbol2HistoricalCloseMap, spscQueue, rtObjectPool);
         simPublisher.startPublishingMarketPxThread();
-        PortfolioUpdater portfolioUpdater = new PortfolioUpdater(symbol2PositionMap, symbol2OptionSymbolsMap);
+        PortfolioUpdater portfolioUpdater = new PortfolioUpdater(symbol2PositionMap, symbol2OptionSymbolsMap, new PortfolioPublisher());
         while (true) {
             final PriceUpdate pu = spscQueue.poll();
             try {
@@ -41,10 +41,8 @@ public class RTPortfolioChecker {
                     String symbol = pu.getSymbol();
                     //ignore other symbols not in the portfolio
                     if (interestedSymbols.contains(symbol)) {
-                        double price = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
-//                        System.out.println("Symbol: " + pu.getSymbol());
-//                        System.out.println("Price: " + price);
-                        portfolioUpdater.updatePortfolio(pu);
+                        double scaledPrice = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
+                        portfolioUpdater.updatePortfolio(symbol, scaledPrice);
                         rtObjectPool.free(pu);
                     }
                 }
@@ -60,8 +58,7 @@ public class RTPortfolioChecker {
     private static void init() {
         Map<String, Instrument> symbol2InstrumentMap = new HashMap<>();
         //2. load instruments from the db
-        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:sample.db");
-             Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:sample.db"); Statement statement = connection.createStatement()) {
             statement.setQueryTimeout(30);
             ResultSet rs = statement.executeQuery("select * from instruments");
             String[] id2SymbolArray = new String[200]; //TODO

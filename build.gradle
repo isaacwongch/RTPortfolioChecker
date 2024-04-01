@@ -17,15 +17,16 @@ repositories {
 
 ext {
     junitVersion = '4.13.2'
-//    cucumberVersion = '7.0.0'
+    cucumberVersion = '7.0.0'
 }
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-//    testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
-//    testImplementation "io.cucumber:cucumber-core:${cucumberVersion}"
-//    testImplementation "io.cucumber:cucumber-junit:${cucumberVersion}"
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.2'
+    testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-core:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-junit:${cucumberVersion}"
     testImplementation 'org.mockito:mockito-core:4.11.0'
     implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
     implementation 'org.slf4j:slf4j-api:2.0.9'

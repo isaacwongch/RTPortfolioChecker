@@ -9,6 +9,12 @@
 * Assume atomic market data update - each carries update of a single symbol
 * For simplicity, assume RISK_FREE_RATE being 2% and IMPLIED_VOLATILITY being 10% for all calculation of option price
 
+**Enhancement Items**
+
+* Pin thread in PortfolioUpdateWorker to a particular core
+* OS Level Tuning
+* Publishing to a ring buffer to decouple PortfolioPublisher and PortfolioUpdateWorker
+
 **Communication Protocol**
 
      0                   1                   2                   3

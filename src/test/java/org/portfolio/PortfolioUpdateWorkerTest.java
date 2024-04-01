@@ -6,10 +6,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.rtportfolio.PortfolioPublisher;
-import org.rtportfolio.PortfolioUpdater;
+import org.rtportfolio.PortfolioUpdateWorker;
+import org.rtportfolio.ds.RTObjectPool;
+import org.rtportfolio.ds.SPSCQueue;
 import org.rtportfolio.model.Instrument;
 import org.rtportfolio.model.InstrumentType;
 import org.rtportfolio.model.Position;
+import org.rtportfolio.model.PriceUpdate;
+import org.rtportfolio.util.PriceUpdateObjectCreator;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -19,7 +23,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
-public class PortfolioUpdaterTest {
+public class PortfolioUpdateWorkerTest {
     private final ArgumentCaptor<Integer> msgSizeCaptor = ArgumentCaptor.forClass(Integer.class);
     private final ArgumentCaptor<String> updatedSymbolCaptor = ArgumentCaptor.forClass(String.class);
     private final ArgumentCaptor<Double> updatedPriceCaptor = ArgumentCaptor.forClass(Double.class);
@@ -46,10 +50,12 @@ public class PortfolioUpdaterTest {
         final Multimap<String, String> stock2OptionMap = ArrayListMultimap.create();
         stock2OptionMap.put("NVDA", "NVDA-JUN-2024-1000-C");
         PortfolioPublisher mockPortfolioPublisher = Mockito.mock(PortfolioPublisher.class);
-        PortfolioUpdater portfolioUpdater = new PortfolioUpdater(symbol2PositionMap, stock2OptionMap, mockPortfolioPublisher);
+        RTObjectPool<PriceUpdate> rtObjectPool = new RTObjectPool<>(10, 100, new PriceUpdateObjectCreator());
+        SPSCQueue<PriceUpdate> spscQueue = new SPSCQueue<>(100);
+        PortfolioUpdateWorker portfolioUpdateWorker = new PortfolioUpdateWorker(spscQueue, rtObjectPool, symbol2PositionMap, stock2OptionMap, mockPortfolioPublisher);
 
         double updatedStockPrice = 900L;
-        portfolioUpdater.updatePortfolio("NVDA", updatedStockPrice);
+        portfolioUpdateWorker.updatePortfolio("NVDA", updatedStockPrice);
         Mockito.verify(mockPortfolioPublisher).publishLatestPortfolio(msgSizeCaptor.capture(), updatedSymbolCaptor.capture(), updatedPriceCaptor.capture(), Mockito.anyMap(), navCaptor.capture());
         assertEquals(112, (int) msgSizeCaptor.getValue());
         assertEquals("NVDA", updatedSymbolCaptor.getValue());

@@ -23,6 +23,8 @@ import java.util.Map;
  * 24 bytes updated symbol | 8 bytes updated price
  * 1...n - 24 bytes symbol | 8 bytes price | 4 bytes qty | 8 bytes market value |
  * 8 bytes (indicates total portfolio NAV)
+ *
+ * TODO: Implement heartbeat/could have used SBE to define the protocol
  */
 public class PortfolioPublisher {
     private static Logger LOG = LoggerFactory.getLogger(PortfolioPublisher.class);    //implied decimal places
@@ -63,6 +65,7 @@ public class PortfolioPublisher {
                     if (key.isAcceptable()) {
                         //TODO check why multiple clients not working for now
                         SocketChannel client = serverSocketChannel.accept();
+                        client.socket().setTcpNoDelay(true);
                         LOG.info("accepted a client");
                         clients.add(client);
                     }
@@ -74,6 +77,15 @@ public class PortfolioPublisher {
         }
     }
 
+    /**
+     * TODO: should pass this to the SPSC queue to decouple
+     *
+     * @param messageSize
+     * @param updatedSymbol
+     * @param updatedPrice
+     * @param symbol2PosMap
+     * @param portfolioNav
+     */
     public void publishLatestPortfolio(final int messageSize, final String updatedSymbol, final double updatedPrice, final Map<String, Position> symbol2PosMap, final double portfolioNav){
         bb.clear();
         bb.putInt(messageSize);

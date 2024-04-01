@@ -33,23 +33,24 @@ public class RTPortfolioChecker {
         SPSCQueue<PriceUpdate> spscQueue = new SPSCQueue<>(100);
         SimPublisher simPublisher = new SimPublisher(symbol2HistoricalCloseMap, spscQueue, rtObjectPool);
         simPublisher.startPublishingMarketPxThread();
-        PortfolioUpdater portfolioUpdater = new PortfolioUpdater(symbol2PositionMap, symbol2OptionSymbolsMap, new PortfolioPublisher());
-        while (true) {
-            final PriceUpdate pu = spscQueue.poll();
-            try {
-                if (pu != null) {
-                    String symbol = pu.getSymbol();
-                    //ignore other symbols not in the portfolio
-                    if (interestedSymbols.contains(symbol)) {
-                        double scaledPrice = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
-                        portfolioUpdater.updatePortfolio(symbol, scaledPrice);
-                        rtObjectPool.free(pu);
-                    }
-                }
-            } catch (Exception ex) {
-                LOG.error("Exception when processing price update message - PriceUpdate[{},{}]", pu.getSymbol(), pu.getPrice(), ex);
-            }
-        }
+        PortfolioUpdateWorker portfolioUpdateWorker = new PortfolioUpdateWorker(spscQueue, rtObjectPool, symbol2PositionMap, symbol2OptionSymbolsMap, new PortfolioPublisher());
+        portfolioUpdateWorker.start();
+//        while (true) {
+//            final PriceUpdate pu = spscQueue.poll();
+//            try {
+//                if (pu != null) {
+//                    String symbol = pu.getSymbol();
+//                    //ignore other symbols not in the portfolio
+//                    if (interestedSymbols.contains(symbol)) {
+//                        double scaledPrice = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
+//                        portfolioUpdateWorker.updatePortfolio(symbol, scaledPrice);
+//                        rtObjectPool.free(pu);
+//                    }
+//                }
+//            } catch (Exception ex) {
+//                LOG.error("Exception when processing price update message - PriceUpdate[{},{}]", pu.getSymbol(), pu.getPrice(), ex);
+//            }
+//        }
     }
 
     /**

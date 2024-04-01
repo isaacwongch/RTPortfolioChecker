@@ -1,14 +1,18 @@
 package org.rtportfolio;
 
 import com.google.common.collect.Multimap;
+import org.rtportfolio.ds.RTObjectPool;
+import org.rtportfolio.ds.SPSCQueue;
 import org.rtportfolio.model.Instrument;
 import org.rtportfolio.model.InstrumentType;
 import org.rtportfolio.model.Position;
+import org.rtportfolio.model.PriceUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Based on the price update of an individual stock, do the following
@@ -17,25 +21,61 @@ import java.util.Map;
  * 3. update the portfolio's NAV
  * 4. Publish portfolio's position & NAV
  * <p>
- * TODO: Implement heartbeat/could have used SBE to define the protocol
  */
-public class PortfolioUpdater {
+public final class PortfolioUpdateWorker {
     private static final double RISK_FREE_RATE = 0.02; //2%
     private static final double IMPLIED_VOLATILITY = 0.1; //for simplicity assume same for all
     private static final Logger LOG = LoggerFactory.getLogger(RTPortfolioChecker.class);
 
     //    private Portfolio targetPortfolio;
+    private SPSCQueue<PriceUpdate> spscQueue;
     private final Multimap<String, String> symbol2OptionMap;
     private final Map<String, Position> symbol2PositionMap;
     private double portfolioNav = 0;
     private final PortfolioPublisher portfolioPublisher;
+    private final Set<String> interestedSymbols;
+    private final RTObjectPool<PriceUpdate> objectPool;
     private final int PUB_MSG_SIZE;
 
-    public PortfolioUpdater(final Map<String, Position> symbol2PositionMap, final Multimap<String, String> symbol2OptionMap, final PortfolioPublisher portfolioPublisher) {
+    public PortfolioUpdateWorker(final SPSCQueue<PriceUpdate> spscQueue, final RTObjectPool<PriceUpdate> priceUpdateRTObjectPool, final Map<String, Position> symbol2PositionMap, final Multimap<String, String> symbol2OptionMap, final PortfolioPublisher portfolioPublisher) {
+        this.spscQueue = spscQueue;
         this.symbol2PositionMap = symbol2PositionMap;
+        this.interestedSymbols = symbol2PositionMap.keySet();
         this.symbol2OptionMap = symbol2OptionMap;
         this.portfolioPublisher = portfolioPublisher;
+        this.objectPool = priceUpdateRTObjectPool;
         PUB_MSG_SIZE = Integer.BYTES + Integer.BYTES + symbol2PositionMap.size() * RTConst.REPEATED_POSITION_COMPONENT_SIZE + Long.BYTES;
+    }
+
+    public void start(){
+        try {
+            //pin thread to cpu programmatically
+            Thread t = new Thread(() -> {
+                doWork();
+            });
+            t.start();
+        } catch (Exception ex){
+            LOG.error("Failure to start PortfolioUpdaterWorker");
+        }
+    }
+
+    private void doWork() {
+        while (true) {
+            final PriceUpdate pu = spscQueue.poll();
+            try {
+                if (pu != null) {
+                    String symbol = pu.getSymbol();
+                    //ignore other symbols not in the portfolio
+                    if (interestedSymbols.contains(symbol)) {
+                        double scaledPrice = pu.getPrice() * RTConst.MARKET_PRICE_SCALED_FACTOR;
+                        updatePortfolio(symbol, scaledPrice);
+                        objectPool.free(pu);
+                    }
+                }
+            } catch (Exception ex) {
+                LOG.error("Exception when processing price update message - PriceUpdate[{},{}]", pu.getSymbol(), pu.getPrice(), ex);
+            }
+        }
     }
 
     public void updatePortfolio(final String updatingStockSymbol, final double updatedStockPrice) {

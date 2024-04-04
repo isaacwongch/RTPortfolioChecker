@@ -7,6 +7,7 @@ import org.rtportfolio.model.Instrument;
 import org.rtportfolio.model.InstrumentType;
 import org.rtportfolio.model.Position;
 import org.rtportfolio.model.PriceUpdate;
+import org.rtportfolio.util.RTUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,7 @@ public final class PortfolioUpdateWorker {
         this.symbol2OptionMap = symbol2OptionMap;
         this.portfolioPublisher = portfolioPublisher;
         this.objectPool = priceUpdateRTObjectPool;
-        PUB_MSG_SIZE = Integer.BYTES + Integer.BYTES + symbol2PositionMap.size() * RTConst.REPEATED_POSITION_COMPONENT_SIZE + Long.BYTES;
+        PUB_MSG_SIZE = RTUtils.getMessageSize(symbol2PositionMap.size());
     }
 
     public void start(){

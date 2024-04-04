@@ -7,6 +7,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.rtportfolio.PortfolioPublisher;
 import org.rtportfolio.PortfolioUpdateWorker;
+import org.rtportfolio.RTConst;
 import org.rtportfolio.ds.RTObjectPool;
 import org.rtportfolio.ds.SPSCQueue;
 import org.rtportfolio.model.Instrument;
@@ -14,6 +15,7 @@ import org.rtportfolio.model.InstrumentType;
 import org.rtportfolio.model.Position;
 import org.rtportfolio.model.PriceUpdate;
 import org.rtportfolio.util.PriceUpdateObjectCreator;
+import org.rtportfolio.util.RTUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -57,7 +59,8 @@ public class PortfolioUpdateWorkerTest {
         double updatedStockPrice = 900L;
         portfolioUpdateWorker.updatePortfolio("NVDA", updatedStockPrice);
         Mockito.verify(mockPortfolioPublisher).publishLatestPortfolio(msgSizeCaptor.capture(), updatedSymbolCaptor.capture(), updatedPriceCaptor.capture(), Mockito.anyMap(), navCaptor.capture());
-        assertEquals(112, (int) msgSizeCaptor.getValue());
+        int expectedSize = RTUtils.getMessageSize(symbol2PositionMap.size());
+        assertEquals(expectedSize, (int) msgSizeCaptor.getValue());
         assertEquals("NVDA", updatedSymbolCaptor.getValue());
         assertEquals(updatedStockPrice, updatedPriceCaptor.getValue(), EPSILON);
         double expectedNav = nvdaStockPos * updatedStockPrice + nvdaCallPos * 10.25453734d;

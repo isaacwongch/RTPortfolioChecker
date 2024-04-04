@@ -31,17 +31,18 @@ public class PortfolioSubscriber {
                 if (buffer.position() < RTConst.INIT_EXPECT_MESSAGE_LEN) {
                     continue;
                 }
+                buffer.flip();
                 buffer.mark();
                 int expectedSize = buffer.getInt();
                 buffer.reset();
                 if (expectedSize == 0) {
                     LOG.debug("Unexpected message size"); //clear?
                 }
-                //read 4 already
-                if (expectedSize > buffer.position() - RTConst.INIT_EXPECT_MESSAGE_LEN) {
-                    LOG.debug("message not received completely - expectedSize {} receivedSize {}", expectedSize, buffer.position());
+                LOG.debug("exp {} pos {} lmt {} ", expectedSize, buffer.position(), buffer.limit());
+                if (expectedSize > buffer.limit()) {//TEST CASE
+                    LOG.warn("message not received completely - expectedSize {} receivedSize {}", expectedSize, buffer.limit()); //should mark debug in real use
                 } else {
-                    buffer.flip();
+//                    buffer.flip();
                     buffer.getInt();
                     //decode, could have used SBE
                     int numOfPosition = buffer.getInt();

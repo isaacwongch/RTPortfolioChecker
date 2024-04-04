@@ -17,7 +17,7 @@ public class RTConst {
 
     public static final int MSG_SYMBOL_SIZE = 24;
     public static final int MSG_POSITION_PRICE_SIZE = Long.BYTES;
-    public static final int MSG_POSITION_QTY_SIZE = Integer.SIZE;
+    public static final int MSG_POSITION_QTY_SIZE = Integer.BYTES;
     public static final int MSG_POSITION_MARKET_VALUE_SIZE = Long.BYTES;
     public static final int REPEATED_POSITION_COMPONENT_SIZE = 48;
     public static final byte PAD = (byte) ' ';
@@ -27,7 +27,7 @@ public class RTConst {
     public static final int MSG_POSITION_BEFORE_UPDATE_FLAG_SIZE = MSG_SYMBOL_SIZE + MSG_POSITION_PRICE_SIZE + MSG_POSITION_QTY_SIZE + MSG_POSITION_MARKET_VALUE_SIZE;
     public static final int MSG_POSITION_TOTAL_SIZE = MSG_POSITION_BEFORE_UPDATE_FLAG_SIZE + Integer.BYTES;
 
-    public static final int INIT_EXPECT_MESSAGE_LEN = Integer.SIZE;
+    public static final int INIT_EXPECT_MESSAGE_LEN = Integer.BYTES;
 
     static {
         Arrays.fill(THREE_PADS, PAD);
